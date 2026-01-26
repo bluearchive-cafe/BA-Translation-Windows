@@ -44,11 +44,29 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          python update_windows_url.py
+          while true; do
+            python update_windows_url.py
+
+            git add info_jp_windows.json
+
+            if git diff --cached --quiet; then
+              git reset
+              sleep 30
+              continue
+            fi
+
+            git commit -m "update jp windows info"
+            git push
+            break
+          done
 
       - name: Decide whether to update addressable
         run: |
-          echo "NEED_UPDATE=true" >> $GITHUB_ENV
+          if [ "$JP_WINDOWS_GAME_CHANGED" = "true" ] || [ "$JP_WINDOWS_ADDRESSABLE_CHANGED" = "true" ]; then
+            echo "NEED_UPDATE=true" >> $GITHUB_ENV
+          else
+            echo "NEED_UPDATE=false" >> $GITHUB_ENV
+          fi
 
       - name: Run JP Windows addressable update
         if: env.NEED_UPDATE == 'true'
