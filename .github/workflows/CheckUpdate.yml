@@ -1,0 +1,73 @@
+name: JP Windows Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  jp-windows:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH Access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Tool Environment
+        run: |
+          git clone --depth 1 git@github.com:beichen23333/BlueArchive-Translation.git tool
+          git clone --depth 1 git@github.com:bluearchive-cafe/bluearchive-cafe-api-launcher-jp.git bluearchive-cafe-api-launcher-jp
+          git clone --depth 1 git@github.com:bluearchive-cafe/bluearchive-cafe-launcher-pkg-ba-jp.git bluearchive-cafe-launcher-pkg-ba-jp
+          git clone --depth 1 git@github.com:bluearchive-cafe/PC-app.git PC-app
+          cp -r tool/* . && rm -rf tool
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run JP Windows URL update until commit success
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          while true; do
+            python update_windows_url.py
+
+            git add info_jp_windows.json
+
+            if git diff --cached --quiet; then
+              git reset
+              sleep 30
+              continue
+            fi
+
+            git commit -m "update jp windows info"
+            git push
+            break
+          done
+
+      - name: Decide whether to update addressable
+        run: |
+          if [ "$JP_WINDOWS_GAME_CHANGED" = "true" ] || [ "$JP_WINDOWS_ADDRESSABLE_CHANGED" = "true" ]; then
+            echo "NEED_UPDATE=true" >> $GITHUB_ENV
+          else
+            echo "NEED_UPDATE=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run JP Windows addressable update
+        if: env.NEED_UPDATE == 'true'
+        run: python update_windows.py
