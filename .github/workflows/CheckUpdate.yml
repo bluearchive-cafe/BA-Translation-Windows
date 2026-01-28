@@ -45,7 +45,7 @@ jobs:
           git config --global user.name "GitHub Actions"
 
           while true; do
-            python update_windows_url.py
+            python -m update.update_windows_url
 
             git add info_jp_windows.json
 
@@ -75,7 +75,7 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: python update_windows.py
+        run: python -m update.update_windows
 
       - name: Run update
         run: |
